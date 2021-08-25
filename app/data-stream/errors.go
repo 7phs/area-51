@@ -1,9 +1,10 @@
-package watcher
+package data_stream
 
 import "fmt"
 
 var (
 	_ error = Unexpected{}
+	_ error = ErrAlreadyShutdown()
 )
 
 type Unexpected struct {

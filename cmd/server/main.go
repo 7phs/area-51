@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/7phs/area-51/app/config"
 	"github.com/7phs/area-51/app/server"
@@ -13,14 +14,14 @@ import (
 func main() {
 	conf := config.Parse()
 	if err := conf.Validate(); err != nil {
-		log.Fatal("invalid config: ", err)
+		log.Fatal(time.Now(), "invalid config: ", err)
 	}
 
-	log.Println("init")
+	log.Println(time.Now(), "init")
 
 	srv, err := server.New(conf)
 	if err != nil {
-		log.Fatal("failed to init server: ", err)
+		log.Fatal(time.Now(), "failed to init server: ", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -31,20 +32,20 @@ func main() {
 		signal.Notify(sigint, os.Interrupt)
 		<-sigint
 
-		log.Println("interrupt")
+		log.Println(time.Now(), "interrupt")
 
 		cancel()
 	}()
 
-	log.Println("start")
+	log.Println(time.Now(), "start")
 
 	srv.Start()
 
 	<-ctx.Done()
 
-	log.Println("stopping...")
+	log.Println(time.Now(), "stopping...")
 
 	srv.Stop()
 
-	log.Println("stop")
+	log.Println(time.Now(), "stop")
 }

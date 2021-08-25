@@ -1,13 +1,19 @@
-package watcher
+package data_stream
 
 var (
-	_ Queue = (*queue)(nil)
+	_ FileChangesQueue = (*queue)(nil)
+	_ Queue            = (*queue)(nil)
 )
 
-type Queue interface {
+type FileChangesQueue interface {
 	FilePath() string
-	Send(Event)
 	Ch() <-chan Event
+}
+
+type Queue interface {
+	FileChangesQueue
+
+	Send(Event)
 }
 
 type queue struct {

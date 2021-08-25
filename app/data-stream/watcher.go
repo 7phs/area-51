@@ -1,4 +1,4 @@
-package watcher
+package data_stream
 
 import (
 	"log"
@@ -11,11 +11,16 @@ import (
 )
 
 var (
-	_ Watcher = (*watcher)(nil)
+	_ FileChangesWatcher = (*watcher)(nil)
+	_ Watcher            = (*watcher)(nil)
 )
 
+type FileChangesWatcher interface {
+	WatchFileChanges(filePath string) (FileChangesQueue, error)
+}
+
 type Watcher interface {
-	WatchFileChanges(filePath string) (Queue, error)
+	FileChangesWatcher
 
 	Start()
 	Stop()
@@ -48,7 +53,7 @@ func NewWatcher() (Watcher, error) {
 
 // WatchFileChanges - a method is responsible to create a queue to watch file changes
 // A queue is identified by file name. File name of watched files should be unique
-func (w *watcher) WatchFileChanges(filePath string) (Queue, error) {
+func (w *watcher) WatchFileChanges(filePath string) (FileChangesQueue, error) {
 	// check shutdown
 	select {
 	case <-w.shutdown.Ch():

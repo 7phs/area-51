@@ -1,4 +1,4 @@
-package watcher
+package data_stream
 
 const (
 	Open Event = iota

@@ -6,27 +6,32 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
 	"github.com/7phs/area-51/app/lib"
-	"github.com/7phs/area-51/app/watcher"
 )
 
 const (
-	defaultBufSize = 1024 * 1024
+	defaultBufSize = 5 * 1024 * 1024
 )
 
 var (
 	_ DataStream = (*dataStream)(nil)
 )
 
-type DataStream interface {
+type DataReader interface {
 	Read() <-chan []byte
+}
+
+type DataStream interface {
+	DataReader
+
 	Start()
 	Stop()
 }
 
 type dataStream struct {
-	queue    watcher.Queue
+	queue    FileChangesQueue
 	filePath string
 	f        *os.File
 	buf      *bufio.Reader
@@ -36,7 +41,7 @@ type dataStream struct {
 	shutdown lib.Shutdown
 }
 
-func NewDataStream(queue watcher.Queue) DataStream {
+func NewDataStream(queue FileChangesQueue) DataStream {
 	return &dataStream{
 		queue:    queue,
 		filePath: queue.FilePath(),
@@ -84,38 +89,38 @@ func (d *dataStream) reactor() {
 	}
 }
 
-func (d *dataStream) handleEvent(event watcher.Event) {
+func (d *dataStream) handleEvent(event Event) {
 	switch event {
-	case watcher.Open:
+	case Open:
 		var err error
 
-		log.Println("open file: ", d.filePath)
+		log.Println(time.Now(), "open file: ", d.filePath)
 
 		d.f, err = os.OpenFile(d.filePath, os.O_RDONLY, 0)
 		if err != nil {
-			log.Println("failed to open file '"+d.filePath+"': ", err)
+			log.Println(time.Now(), "failed to open file '"+d.filePath+"': ", err)
 			return
 		}
 		d.buf.Reset(d.f)
 
 		d.readCmd()
 
-	case watcher.Read:
+	case Read:
 		if d.f == nil {
 			return
 		}
 
 		d.readCmd()
 
-	case watcher.Close:
+	case Close:
 		if d.f == nil {
 			return
 		}
 
-		log.Println("close file: ", d.filePath)
+		log.Println(time.Now(), "close file: ", d.filePath)
 
 		if err := d.f.Close(); err != nil {
-			log.Println("failed to close file: ", d.filePath)
+			log.Println(time.Now(), "failed to close file: ", d.filePath)
 		}
 
 		d.f = nil
@@ -141,7 +146,7 @@ func (d *dataStream) tryReadBuf() {
 
 		n, err := d.buf.Read(buf)
 		if err != nil && !errors.Is(err, io.EOF) {
-			log.Println("error while read: ", err)
+			log.Println(time.Now(), "error while read: ", err)
 		}
 		if n == 0 {
 			return
