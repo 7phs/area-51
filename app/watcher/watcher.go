@@ -2,6 +2,7 @@ package watcher
 
 import (
 	"log"
+	"path/filepath"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -47,7 +48,6 @@ func NewWatcher() (Watcher, error) {
 
 // WatchFileChanges - a method is responsible to create a queue to watch file changes
 // A queue is identified by file name. File name of watched files should be unique
-// TODO: needs implement new of identification and watching different directories
 func (w *watcher) WatchFileChanges(filePath string) (Queue, error) {
 	// check shutdown
 	select {
@@ -56,20 +56,26 @@ func (w *watcher) WatchFileChanges(filePath string) (Queue, error) {
 	default:
 	}
 
-	queue := newQueue(filePath)
+	q := newQueue(filePath)
 
 	w.Lock()
 	defer w.Unlock()
 
-	if _, ok := w.watchedDir[queue.Dir()]; !ok {
-		if err := w.notifier.Add(queue.Dir()); err != nil {
+	dir := filepath.Dir(filePath)
+	filePath, err := filepath.Abs(filePath)
+	if err != nil {
+		return nil, ErrUnexpected(err)
+	}
+
+	if _, ok := w.watchedDir[dir]; !ok {
+		if err := w.notifier.Add(dir); err != nil {
 			return nil, ErrUnexpected(err)
 		}
 	}
 
-	w.queues[queue.FileName()] = queue
+	w.queues[filePath] = q
 
-	return queue, nil
+	return q, nil
 }
 
 func (w *watcher) Start() {
@@ -95,16 +101,21 @@ func (w *watcher) reactor() {
 			return
 
 		case event := <-w.notifier.Events:
-			w.eventHandler(event)
+			w.handleEvent(event)
 
 		case err := <-w.notifier.Errors:
-			log.Println("event: ", err)
+			log.Println("error on event handling: ", err)
 		}
 	}
 }
 
-func (w *watcher) eventHandler(event fsnotify.Event) {
-	q, ok := w.getQueue(event.Name)
+func (w *watcher) handleEvent(event fsnotify.Event) {
+	filePath, err := filepath.Abs(event.Name)
+	if err != nil {
+		return
+	}
+
+	q, ok := w.getQueue(filePath)
 	if !ok {
 		return
 	}

@@ -27,20 +27,16 @@ func main() {
 		log.Fatal("failed to init reference queue changes: ", err)
 	}
 
-	referenceStream, err := data_stream.NewDataStream(referenceQueue)
-	if err != nil {
-		log.Fatal("failed to init reference data stream: ", err)
-	}
+	referenceStream := data_stream.NewDataStream(referenceQueue)
 
 	rawQueue, err := w.WatchFileChanges(conf.RawDataFile)
 	if err != nil {
 		log.Fatal("failed to init raw queue changes: ", err)
 	}
 
-	rawStream, err := data_stream.NewDataStream(rawQueue)
-	if err != nil {
-		log.Fatal("failed to init raw data stream: ", err)
-	}
+	rawStream := data_stream.NewDataStream(rawQueue)
+
+	log.Println("init")
 
 	referenceStream.Start()
 	rawStream.Start()
@@ -59,7 +55,22 @@ func main() {
 		cancel()
 	}()
 
-	<-ctx.Done()
+	func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case buf := <-rawStream.Read():
+				log.Println("READ - RAW: ", string(buf))
+
+			case buf := <-referenceStream.Read():
+				log.Println("READ - REF: ", string(buf))
+			}
+		}
+	}()
+
+	log.Println("ready to shutdown")
 
 	w.Stop()
 	referenceStream.Stop()
