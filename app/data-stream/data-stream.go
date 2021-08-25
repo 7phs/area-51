@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/7phs/area-51/app/lib"
@@ -38,6 +39,7 @@ type dataStream struct {
 	reader   chan []byte
 	cmd      chan bool
 
+	readWG   sync.WaitGroup
 	shutdown lib.Shutdown
 }
 
@@ -65,7 +67,10 @@ func (d *dataStream) Start() {
 		d.reactor()
 	}()
 
+	d.readWG.Add(1)
 	go func() {
+		defer d.readWG.Done()
+
 		d.readStream()
 	}()
 }
@@ -73,8 +78,16 @@ func (d *dataStream) Start() {
 func (d *dataStream) Stop() {
 	d.shutdown.Stop(nil, func() {
 		close(d.cmd)
+
+		d.readWG.Wait()
+
 		close(d.reader)
 	})
+
+	if d.f != nil {
+		d.f.Close()
+		d.f = nil
+	}
 }
 
 func (d *dataStream) reactor() {
@@ -103,6 +116,7 @@ func (d *dataStream) handleEvent(event Event) {
 		}
 		d.buf.Reset(d.f)
 
+		d.delimiterCmd()
 		d.readCmd()
 
 	case Read:
@@ -117,6 +131,8 @@ func (d *dataStream) handleEvent(event Event) {
 			return
 		}
 
+		d.delimiterCmd()
+
 		log.Println(time.Now(), "close file: ", d.filePath)
 
 		if err := d.f.Close(); err != nil {
@@ -126,6 +142,10 @@ func (d *dataStream) handleEvent(event Event) {
 		d.f = nil
 		d.buf.Reset(nil)
 	}
+}
+
+func (d *dataStream) delimiterCmd() {
+	d.reader <- nil
 }
 
 func (d *dataStream) readCmd() {
@@ -142,6 +162,12 @@ func (d *dataStream) readStream() {
 
 func (d *dataStream) tryReadBuf() {
 	for {
+		select {
+		case <-d.shutdown.Ch():
+			return
+		default:
+		}
+
 		buf := make([]byte, defaultBufSize)
 
 		n, err := d.buf.Read(buf)
@@ -154,8 +180,6 @@ func (d *dataStream) tryReadBuf() {
 
 		buf = buf[:n]
 
-		go func() {
-			d.reader <- buf
-		}()
+		d.reader <- buf
 	}
 }

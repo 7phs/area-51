@@ -6,23 +6,18 @@ import (
 )
 
 var (
-	_ RecordStream = (*recordReader)(nil)
 	_ RecordReader = (*recordReader)(nil)
 )
 
-type RecordStream interface {
-	Records() <-chan DataRecord
-}
-
 type RecordReader interface {
-	RecordStream
+	Records() <-chan DataRecord
 
 	Start()
 	Stop()
 }
 
 type recordReader struct {
-	reader     data_stream.DataReader
+	stream     data_stream.DataStream
 	delimiter  byte
 	skipHeader bool
 
@@ -31,9 +26,9 @@ type recordReader struct {
 	shutdown lib.Shutdown
 }
 
-func NewRecordReader(reader data_stream.DataReader) RecordReader {
+func NewRecordReader(reader data_stream.DataStream) RecordReader {
 	return &recordReader{
-		reader:     reader,
+		stream:     reader,
 		delimiter:  ',',
 		skipHeader: true,
 		records:    make(chan DataRecord),
@@ -52,15 +47,29 @@ func (p *recordReader) Start() {
 
 		p.processor()
 	}()
+
+	p.stream.Start()
 }
 
 func (p *recordReader) Stop() {
-	p.shutdown.Stop(nil, nil)
+	p.stream.Stop()
+
+	p.shutdown.Stop(nil, func() {
+		close(p.records)
+	})
 }
 
 func (p *recordReader) processor() {
 	totalCount := 0
-	for buf := range p.reader.Read() {
+	firstLine := true
+
+	for buf := range p.stream.Read() {
+		if buf == nil {
+			firstLine = true
+			// TODO: handle finish of buffer
+			continue
+		}
+
 		prev := 0
 		count := 0
 
@@ -68,6 +77,14 @@ func (p *recordReader) processor() {
 			if c != '\n' {
 				// TODO: check maximum length of line
 				continue
+			}
+
+			if firstLine {
+				firstLine = false
+
+				if p.skipHeader {
+					continue
+				}
 			}
 
 			p.send(parseDataRecord(p.delimiter, buf[prev:i]))
@@ -84,7 +101,10 @@ func (p *recordReader) processor() {
 }
 
 func (p *recordReader) send(rec DataRecord) {
+	p.shutdown.Add(1)
 	go func() {
+		defer p.shutdown.Done()
+
 		p.records <- rec
 	}()
 }

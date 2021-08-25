@@ -12,11 +12,11 @@ type Reference interface {
 }
 
 type reference struct {
-	stream   RecordStream
+	stream   RecordReader
 	shutdown lib.Shutdown
 }
 
-func NewReference(stream RecordStream) Reference {
+func NewReference(stream RecordReader) Reference {
 	return &reference{
 		stream:   stream,
 		shutdown: lib.NewShutdown(),
@@ -31,8 +31,12 @@ func (d *reference) Start() {
 		for range d.stream.Records() {
 		}
 	}()
+
+	d.stream.Start()
 }
 
 func (d *reference) Stop() {
+	d.stream.Stop()
+
 	d.shutdown.Stop(nil, nil)
 }
