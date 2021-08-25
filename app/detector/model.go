@@ -1,71 +1,59 @@
 package detector
 
-import "strconv"
+import (
+	"bytes"
+	"io"
+	"strconv"
+)
+
+const (
+	dataRecordFieldCount = 5
+	featuresCount        = 3
+	featuresDelimiter    = ','
+)
+
+var (
+	newLine = []byte(`
+`)
+)
 
 type DataRecord struct {
+	line []byte
+
 	Id          []byte
 	City        []byte
 	Sport       []byte
 	Size        []byte
 	Features    []byte
-	FeaturesF64 [3]float64
+	FeaturesF64 [featuresCount]float64
 }
 
-func parseCSV(delimiter byte, line []byte, fn func(delimiter byte, index int, v []byte)) {
-	prev := 0
-	index := 0
-	quote := false
-	skip := false
-
-	for i, c := range line {
-		// TODO: careful parsing + convert to iterator
-		if skip {
-			skip = false
-			continue
-		}
-
-		switch c {
-		case '"':
-			quote = !quote
-		case '\\':
-			skip = true
-			continue
-		}
-		if quote {
-			continue
-		}
-
-		if c != delimiter {
-			continue
-		}
-
-		fn(delimiter, index, line[prev:i])
-
-		prev = i + 1
-		index++
+func parseDataRecord(delimiter byte, line []byte) (DataRecord, error) {
+	record := DataRecord{
+		line: line,
 	}
 
-	fn(delimiter, index, line[prev:])
+	index, err := parseCSVLine(delimiter, line, record.assignValue)
+	if err != nil {
+		return record, err
+	}
+	if index < dataRecordFieldCount-1 {
+		return record, ErrCSVLessFields(index)
+	}
 
-	// TODO: catch error of format. Counter less than expected
+	return record, err
 }
 
-func parseDataRecord(delimiter byte, line []byte) DataRecord {
-	record := DataRecord{}
-
-	parseCSV(delimiter, line, record.assignValue)
-
-	return record
-}
-
-func (d *DataRecord) assignValue(delimiter byte, index int, v []byte) {
+func (d *DataRecord) assignValue(index int, v []byte) error {
 	switch index {
 	case 0:
 		d.Id = v
 
 	case 1:
 		d.Features = v
-		parseCSV(delimiter, v, d.assignFeaturesF64)
+		if err := d.parseFeatures(v); err != nil {
+			return err
+		}
 
 	case 2:
 		d.City = v
@@ -73,17 +61,49 @@ func (d *DataRecord) assignValue(delimiter byte, index int, v []byte) {
 		d.Sport = v
 	case 4:
 		d.Size = v
+
 	default:
-		// TODO: catch error of format
+		return ErrCSVOutOfIndex(index)
 	}
+
+	return nil
 }
 
-func (d *DataRecord) assignFeaturesF64(_ byte, index int, v []byte) {
-	if index >= len(d.FeaturesF64) {
-		// TODO: catch error of format
-		return
+func (d *DataRecord) parseFeatures(v []byte) error {
+	if len(v) < 4 {
+		return ErrFeaturesLessIndex(0)
+	}
+	if v[0] != '"' || v[1] != '[' || v[len(v)-2] != ']' || v[len(v)-1] != '"' {
+		return ErrFeaturesInvalidFormat()
 	}
 
-	// TODO: catch error
-	d.FeaturesF64[index], _ = strconv.ParseFloat(string(v), 64)
+	index, err := parseCSVLine(featuresDelimiter, v[2:len(v)-2], d.assignFeaturesF64)
+	if err != nil {
+		return err
+	}
+	if index < featuresCount-1 {
+		return ErrFeaturesLessIndex(index)
+	}
+
+	return nil
+}
+
+func (d *DataRecord) assignFeaturesF64(index int, v []byte) error {
+	if index >= featuresCount {
+		return ErrFeaturesOutOfIndex(index)
+	}
+
+	var err error
+
+	d.FeaturesF64[index], err = strconv.ParseFloat(string(bytes.TrimSpace(v)), 64)
+	if err != nil {
+		return ErrFloat64Convert(err)
+	}
+
+	return nil
+}
+
+func (d *DataRecord) Serialize(w io.Writer) {
+	_, _ = w.Write(d.line)
+	_, _ = w.Write(newLine)
 }

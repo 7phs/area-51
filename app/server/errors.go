@@ -3,7 +3,7 @@ package server
 import "fmt"
 
 var (
-	_ error = (*Unexpected)(nil)
+	_ error = Unexpected{}
 )
 
 type Unexpected struct {

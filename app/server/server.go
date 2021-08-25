@@ -1,10 +1,17 @@
 package server
 
 import (
+	"path/filepath"
+
 	"github.com/7phs/area-51/app/config"
 	data_stream "github.com/7phs/area-51/app/data-stream"
 	"github.com/7phs/area-51/app/detector"
 	"github.com/7phs/area-51/app/lib"
+)
+
+const (
+	cleanFileName     = "clean.csv"
+	anomaliesFileName = "anomalies.csv"
 )
 
 type Server interface {
@@ -44,7 +51,11 @@ func New(conf config.Config) (Server, error) {
 
 	rawStream := data_stream.NewDataStream(rawQueue)
 	rawReader := detector.NewRecordReader(rawStream)
-	dtctr := detector.NewDetector(rawReader)
+
+	cleanWriter := detector.NewRecordWriter(filepath.Join(conf.OutputDir, cleanFileName))
+	anomaliesWriter := detector.NewRecordWriter(filepath.Join(conf.OutputDir, anomaliesFileName))
+
+	dtctr := detector.NewDetector(rawReader, reference, cleanWriter, anomaliesWriter)
 
 	return &server{
 		w: w,

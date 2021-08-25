@@ -60,43 +60,23 @@ func (p *recordReader) Stop() {
 }
 
 func (p *recordReader) processor() {
-	totalCount := 0
-	firstLine := true
+	var (
+		prevBuf   []byte
+		firstLine = true
+		prevIndex = -1
+	)
 
 	for buf := range p.stream.Read() {
 		if buf == nil {
 			firstLine = true
+			prevBuf = nil
+			prevIndex = -1
 			// TODO: handle finish of buffer
 			continue
 		}
 
-		prev := 0
-		count := 0
-
-		for i, c := range buf {
-			if c != '\n' {
-				// TODO: check maximum length of line
-				continue
-			}
-
-			if firstLine {
-				firstLine = false
-
-				if p.skipHeader {
-					continue
-				}
-			}
-
-			p.send(parseDataRecord(p.delimiter, buf[prev:i]))
-			count++
-
-			prev = i + 1
-		}
-
-		p.send(parseDataRecord(p.delimiter, buf[prev:]))
-
-		count++
-		totalCount += count
+		firstLine, prevIndex = parseCSV(p.delimiter, p.skipHeader, firstLine, prevIndex, prevBuf, buf, p.send)
+		prevBuf = buf
 	}
 }
 

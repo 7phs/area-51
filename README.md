@@ -5,20 +5,24 @@
 * [X] Check existing file per queue and open and read it immediately
 * [X] Parse CSV 
 * [X] Parse features float array
-* [ ] Inter-buffer processing
+* [X] Probably send command, or add a feature of handling that file is close on data-stream
+* [X] Skip header
+* [X] Inter-buffer processing
+* [X] Handle error of csv format - just skip record
+* [X] Check a record for anomalies (call dummy preference)
+* [X] Split output stream into two
+* [X] Write record to file
 * [ ] Reference collector
 * [ ] Calculate Z-test of reference
 * [ ] Anomalies detector, which uses the reference collector 
-* [ ] Check a record for anomalies
-* [ ] Split output stream into two
-* [ ] Write record to file
-* [ ] Probably send command, or add a feature of handling that file is close on data-stream
-* [ ] Skip header
 * [ ] Dockerfile and build image
 * [ ] Command for one time processing
 * [ ] Description of the project
-* [ ] Handle csv format records
+* [ ] Configuration for delimiter and skipping the first line
 * [ ] Pool of buffer for float array[3]
 * [ ] Pool for read buffer
 * [ ] Unit-test of happy cases
 * [ ] Logger with levels
+
+BUGS:
+* [ ] Last line missed

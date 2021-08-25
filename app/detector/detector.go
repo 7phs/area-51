@@ -1,9 +1,10 @@
 package detector
 
 import (
-	"github.com/7phs/area-51/app/lib"
 	"log"
 	"time"
+
+	"github.com/7phs/area-51/app/lib"
 )
 
 var (
@@ -16,13 +17,28 @@ type Detector interface {
 }
 
 type detector struct {
-	stream   RecordReader
+	stream    RecordReader
+	validator AnomaliesValidator
+
+	cleanWriter     RecordWriter
+	anomaliesWriter RecordWriter
+
 	shutdown lib.Shutdown
 }
 
-func NewDetector(stream RecordReader) Detector {
+func NewDetector(
+	stream RecordReader,
+	validator AnomaliesValidator,
+	cleanWriter RecordWriter,
+	anomaliesWriter RecordWriter,
+) Detector {
 	return &detector{
-		stream:   stream,
+		stream:    stream,
+		validator: validator,
+
+		cleanWriter:     cleanWriter,
+		anomaliesWriter: anomaliesWriter,
+
 		shutdown: lib.NewShutdown(),
 	}
 }
@@ -32,14 +48,18 @@ func (d *detector) Start() {
 	go func() {
 		defer d.shutdown.Done()
 
-		totalCount := int64(0)
-		start := time.Now()
+		var (
+			totalCount = int64(0)
+			start      = time.Now()
+		)
 
-		for range d.stream.Records() {
+		for rec := range d.stream.Records() {
 			totalCount++
 
-			if totalCount > 10_000 {
-				log.Println("10 000 per ", time.Since(start))
+			d.writeRecord(rec)
+
+			if totalCount > 50_000 {
+				log.Println("50 000 per ", time.Since(start))
 
 				totalCount = 0
 				start = time.Now()
@@ -50,8 +70,20 @@ func (d *detector) Start() {
 	d.stream.Start()
 }
 
+func (d *detector) writeRecord(rec DataRecord) {
+	if d.validator.Validate(rec) {
+		d.cleanWriter.Write(rec)
+		return
+	}
+
+	d.anomaliesWriter.Write(rec)
+}
+
 func (d *detector) Stop() {
 	d.stream.Stop()
 
 	d.shutdown.Stop(nil, nil)
+
+	d.cleanWriter.Close()
+	d.anomaliesWriter.Close()
 }

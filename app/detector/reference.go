@@ -3,10 +3,17 @@ package detector
 import "github.com/7phs/area-51/app/lib"
 
 var (
-	_ Reference = (*reference)(nil)
+	_ AnomaliesValidator = (*reference)(nil)
+	_ Reference          = (*reference)(nil)
 )
 
+type AnomaliesValidator interface {
+	Validate(rec DataRecord) bool
+}
+
 type Reference interface {
+	AnomaliesValidator
+
 	Start()
 	Stop()
 }
@@ -21,6 +28,10 @@ func NewReference(stream RecordReader) Reference {
 		stream:   stream,
 		shutdown: lib.NewShutdown(),
 	}
+}
+
+func (d *reference) Validate(_ DataRecord) bool {
+	return true
 }
 
 func (d *reference) Start() {
