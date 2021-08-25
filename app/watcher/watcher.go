@@ -2,9 +2,11 @@ package watcher
 
 import (
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/7phs/area-51/app/lib"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -27,9 +29,7 @@ type watcher struct {
 	watchedDir map[string]bool
 	queues     map[string]Queue
 
-	wg       sync.WaitGroup
-	shutdown chan bool
-	once     sync.Once
+	shutdown lib.Shutdown
 }
 
 func NewWatcher() (Watcher, error) {
@@ -42,7 +42,7 @@ func NewWatcher() (Watcher, error) {
 		notifier:   n,
 		watchedDir: make(map[string]bool),
 		queues:     make(map[string]Queue),
-		shutdown:   make(chan bool),
+		shutdown:   lib.NewShutdown(),
 	}, nil
 }
 
@@ -51,7 +51,7 @@ func NewWatcher() (Watcher, error) {
 func (w *watcher) WatchFileChanges(filePath string) (Queue, error) {
 	// check shutdown
 	select {
-	case <-w.shutdown:
+	case <-w.shutdown.Ch():
 		return nil, ErrAlreadyShutdown()
 	default:
 	}
@@ -79,25 +79,41 @@ func (w *watcher) WatchFileChanges(filePath string) (Queue, error) {
 }
 
 func (w *watcher) Start() {
-	w.wg.Add(1)
+	w.shutdown.Add(1)
 	go func() {
-		defer w.wg.Done()
+		defer w.shutdown.Done()
+
+		w.preInit()
 
 		w.reactor()
 	}()
 }
 
 func (w *watcher) Stop() {
-	w.once.Do(func() {
-		close(w.shutdown)
-		w.wg.Wait()
-	})
+	w.shutdown.Stop(nil, nil)
+}
+
+func (w *watcher) preInit() {
+	var wg sync.WaitGroup
+
+	wg.Add(len(w.queues))
+	for _, q := range w.queues {
+		go func(q Queue) {
+			defer wg.Done()
+
+			if _, err := os.Stat(q.FilePath()); err == nil {
+				q.Send(Open)
+			}
+		}(q)
+	}
+
+	wg.Wait()
 }
 
 func (w *watcher) reactor() {
 	for {
 		select {
-		case <-w.shutdown:
+		case <-w.shutdown.Ch():
 			return
 
 		case event := <-w.notifier.Events:

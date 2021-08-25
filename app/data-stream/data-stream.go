@@ -6,8 +6,8 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
 
+	"github.com/7phs/area-51/app/lib"
 	"github.com/7phs/area-51/app/watcher"
 )
 
@@ -33,9 +33,7 @@ type dataStream struct {
 	reader   chan []byte
 	cmd      chan bool
 
-	wg       sync.WaitGroup
-	shutdown chan bool
-	once     sync.Once
+	shutdown lib.Shutdown
 }
 
 func NewDataStream(queue watcher.Queue) DataStream {
@@ -46,7 +44,7 @@ func NewDataStream(queue watcher.Queue) DataStream {
 		buf:      bufio.NewReaderSize(nil, defaultBufSize),
 		reader:   make(chan []byte),
 		cmd:      make(chan bool),
-		shutdown: make(chan bool),
+		shutdown: lib.NewShutdown(),
 	}
 }
 
@@ -55,9 +53,9 @@ func (d *dataStream) Read() <-chan []byte {
 }
 
 func (d *dataStream) Start() {
-	d.wg.Add(1)
+	d.shutdown.Add(1)
 	go func() {
-		defer d.wg.Done()
+		defer d.shutdown.Done()
 
 		d.reactor()
 	}()
@@ -68,9 +66,7 @@ func (d *dataStream) Start() {
 }
 
 func (d *dataStream) Stop() {
-	d.once.Do(func() {
-		close(d.shutdown)
-		d.wg.Wait()
+	d.shutdown.Stop(nil, func() {
 		close(d.cmd)
 		close(d.reader)
 	})
@@ -79,7 +75,7 @@ func (d *dataStream) Stop() {
 func (d *dataStream) reactor() {
 	for {
 		select {
-		case <-d.shutdown:
+		case <-d.shutdown.Ch():
 			return
 
 		case event := <-d.queue.Ch():
