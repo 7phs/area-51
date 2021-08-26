@@ -30,6 +30,6 @@ lint:
 image:
 	docker build -t $(IMAGE):$(VERSION)  .
 
-.PHONY: push
-push:
+.PHONY: image-push
+image-push:
 	docker push $(IMAGE):$(VERSION)

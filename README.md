@@ -17,7 +17,7 @@
 * [X] Waiting for reference before calculating Z-test
 * [X] Anomalies detector, which uses the reference collector
 * [X] Dockerfile and build image
-* [ ] Push image to hub.docker.com
+* [X] Push image to hub.docker.com
 * [ ] Description of the project
 * [ ] Configuration for delimiter, skipping the first line, size of buffer
 * [ ] Pool for read buffer
