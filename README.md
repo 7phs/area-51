@@ -12,17 +12,23 @@
 * [X] Check a record for anomalies (call dummy preference)
 * [X] Split output stream into two
 * [X] Write record to file
-* [ ] Reference collector
-* [ ] Calculate Z-test of reference
+* [X] Reference collector
+* [X] Calculate Z-test of reference
+* [ ] Waiting for reference before calculating Z-test
 * [ ] Anomalies detector, which uses the reference collector 
 * [ ] Dockerfile and build image
 * [ ] Command for one time processing
 * [ ] Description of the project
-* [ ] Configuration for delimiter and skipping the first line
+* [ ] Configuration for delimiter, skipping the first line, size of buffer
 * [ ] Pool of buffer for float array[3]
 * [ ] Pool for read buffer
 * [ ] Unit-test of happy cases
 * [ ] Logger with levels
 
 BUGS:
-* [ ] Last line missed
+* [ ] Last line missed 
+
+  
+https://github.com/montanaflynn/stats - MIT
+https://machinelearningmastery.com/critical-values-for-statistical-hypothesis-testing/
+https://mgimond.github.io/Stats-in-R/z_t_tests.html

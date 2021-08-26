@@ -10,11 +10,8 @@ import (
 func TestParseDataRecord(t *testing.T) {
 	line := []byte(`100000,"[0.13103569, 0.046841323000000004, 0.19260901]",lisbon,scuba diving,S`)
 	expected := DataRecord{
-		Id:       []byte("100000"),
-		City:     []byte("lisbon"),
-		Sport:    []byte("scuba diving"),
-		Size:     []byte("S"),
-		Features: []byte(`"[0.13103569, 0.046841323000000004, 0.19260901]"`),
+		line: []byte(`100000,"[0.13103569, 0.046841323000000004, 0.19260901]",lisbon,scuba diving,S`),
+		Key:  []byte("lisbon,scuba diving,S"),
 		FeaturesF64: [3]float64{
 			0.13103569,
 			0.046841323000000004,

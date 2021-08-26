@@ -1,6 +1,11 @@
 package detector
 
-import "github.com/7phs/area-51/app/lib"
+import (
+	"log"
+	"time"
+
+	"github.com/7phs/area-51/app/lib"
+)
 
 var (
 	_ AnomaliesValidator = (*reference)(nil)
@@ -20,30 +25,47 @@ type Reference interface {
 
 type reference struct {
 	stream   RecordReader
+	stat     PartitionStat
 	shutdown lib.Shutdown
 }
 
 func NewReference(stream RecordReader) Reference {
 	return &reference{
 		stream:   stream,
+		stat:     NewPartitionStat(),
 		shutdown: lib.NewShutdown(),
 	}
 }
 
-func (d *reference) Validate(_ DataRecord) bool {
+func (r *reference) Validate(_ DataRecord) bool {
 	return true
 }
 
-func (d *reference) Start() {
-	d.shutdown.Add(1)
+func (r *reference) Start() {
+	r.shutdown.Add(1)
 	go func() {
-		defer d.shutdown.Done()
+		defer r.shutdown.Done()
 
-		for range d.stream.Records() {
+		var (
+			totalCount = int64(0)
+			start      = time.Now()
+		)
+
+		for rec := range r.stream.Records() {
+			totalCount++
+
+			r.stat.Add(string(rec.Key), rec.FeaturesF64)
+
+			if totalCount > 45_000 {
+				log.Println("REFERENCE: 45 000 per ", time.Since(start))
+
+				totalCount = 0
+				start = time.Now()
+			}
 		}
 	}()
 
-	d.stream.Start()
+	r.stream.Start()
 }
 
 func (d *reference) Stop() {

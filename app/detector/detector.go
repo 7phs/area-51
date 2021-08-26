@@ -58,8 +58,8 @@ func (d *detector) Start() {
 
 			d.writeRecord(rec)
 
-			if totalCount > 50_000 {
-				log.Println("50 000 per ", time.Since(start))
+			if totalCount > 45_000 {
+				log.Println("DETECTOR: 45 000 per ", time.Since(start))
 
 				totalCount = 0
 				start = time.Now()

@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	dataRecordFieldCount = 5
+	dataRecordFieldCount = 3
 	featuresCount        = 3
 	featuresDelimiter    = ','
 )
@@ -20,11 +20,7 @@ var (
 type DataRecord struct {
 	line []byte
 
-	Id          []byte
-	City        []byte
-	Sport       []byte
-	Size        []byte
-	Features    []byte
+	Key         []byte
 	FeaturesF64 [featuresCount]float64
 }
 
@@ -33,7 +29,7 @@ func parseDataRecord(delimiter byte, line []byte) (DataRecord, error) {
 		line: line,
 	}
 
-	index, err := parseCSVLine(delimiter, line, record.assignValue)
+	index, err := parseCSVLineN(delimiter, line, 3, record.assignValue)
 	if err != nil {
 		return record, err
 	}
@@ -47,20 +43,14 @@ func parseDataRecord(delimiter byte, line []byte) (DataRecord, error) {
 func (d *DataRecord) assignValue(index int, v []byte) error {
 	switch index {
 	case 0:
-		d.Id = v
 
 	case 1:
-		d.Features = v
 		if err := d.parseFeatures(v); err != nil {
 			return err
 		}
 
 	case 2:
-		d.City = v
-	case 3:
-		d.Sport = v
-	case 4:
-		d.Size = v
+		d.Key = v
 
 	default:
 		return ErrCSVOutOfIndex(index)
@@ -77,7 +67,7 @@ func (d *DataRecord) parseFeatures(v []byte) error {
 		return ErrFeaturesInvalidFormat()
 	}
 
-	index, err := parseCSVLine(featuresDelimiter, v[2:len(v)-2], d.assignFeaturesF64)
+	index, err := parseCSVLineN(featuresDelimiter, v[2:len(v)-2], -1, d.assignFeaturesF64)
 	if err != nil {
 		return err
 	}

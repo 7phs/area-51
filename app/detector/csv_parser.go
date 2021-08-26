@@ -66,7 +66,7 @@ func parseCSV(delimiter byte, skipHeader, firstLine bool, prevIndex int, prevBuf
 	return firstLine, -1
 }
 
-func parseCSVLine(delimiter byte, line []byte, fn func(index int, v []byte) error) (int, error) {
+func parseCSVLineN(delimiter byte, line []byte, N int, fn func(index int, v []byte) error) (int, error) {
 	prev := 0
 	index := 0
 	quote := false
@@ -99,6 +99,10 @@ func parseCSVLine(delimiter byte, line []byte, fn func(index int, v []byte) erro
 
 		prev = i + 1
 		index++
+
+		if N >= 0 && index+1 >= N {
+			break
+		}
 	}
 
 	if err := fn(index, line[prev:]); err != nil {
