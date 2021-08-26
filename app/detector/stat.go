@@ -1,6 +1,12 @@
 package detector
 
-import "math"
+import (
+	"math"
+)
+
+const (
+	scoreThreshold = 3.
+)
 
 type Accumulator struct {
 	numbers int64
@@ -42,7 +48,7 @@ type PartitionStat struct {
 
 func NewPartitionStat() PartitionStat {
 	return PartitionStat{
-		stat: make(map[string][3]Accumulator, 128),
+		stat: make(map[string][3]Accumulator),
 	}
 }
 
@@ -56,16 +62,14 @@ func (p *PartitionStat) Add(key string, features [3]float64) {
 	p.stat[key] = acc
 }
 
-func (p *PartitionStat) ZTest(key string, features [3]float64) [3]float64 {
+func (p *PartitionStat) IsAnomaly(key string, features [3]float64) bool {
 	acc := p.stat[key]
 
 	mean0, stdDev0 := acc[0].MeanStdDev()
 	mean1, stdDev1 := acc[1].MeanStdDev()
 	mean2, stdDev2 := acc[2].MeanStdDev()
 
-	return [3]float64{
-		(features[0] - mean0) / stdDev0,
-		(features[1] - mean1) / stdDev1,
-		(features[2] - mean2) / stdDev2,
-	}
+	return (features[0]-mean0)/stdDev0 > scoreThreshold ||
+		(features[1]-mean1)/stdDev1 > scoreThreshold ||
+		(features[2]-mean2)/stdDev2 > scoreThreshold
 }

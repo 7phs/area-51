@@ -5,6 +5,10 @@ VERSION = latest
 build:
 	go build -o ./bin/ ./cmd/...
 
+.PHONY: build-race
+build-race:
+	go build --race -o ./bin/ ./cmd/...
+
 .PHONY: run-server
 run:
 	go run ./cmd/server

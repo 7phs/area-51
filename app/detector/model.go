@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 	"strconv"
+
+	data_stream "github.com/7phs/area-51/app/data-stream"
 )
 
 const (
@@ -22,6 +24,7 @@ type DataRecord struct {
 
 	Key         []byte
 	FeaturesF64 [featuresCount]float64
+	Command     data_stream.Command
 }
 
 func parseDataRecord(delimiter byte, line []byte) (DataRecord, error) {
@@ -38,6 +41,10 @@ func parseDataRecord(delimiter byte, line []byte) (DataRecord, error) {
 	}
 
 	return record, err
+}
+
+func (d *DataRecord) IsCommand() bool {
+	return d.Command != 0
 }
 
 func (d *DataRecord) assignValue(index int, v []byte) error {

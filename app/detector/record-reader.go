@@ -68,14 +68,21 @@ func (p *recordReader) processor() {
 
 	for buf := range p.stream.Read() {
 		switch buf.Command() {
-		case data_stream.NewData, data_stream.CloseData:
+		case data_stream.NewData:
 			firstLine = true
 			prevBuf = nil
 			prevIndex = -1
+
+			p.send(DataRecord{Command: buf.Command()})
 		}
 
 		firstLine, prevIndex = parseCSV(p.delimiter, p.skipHeader, firstLine, prevIndex, prevBuf, buf, p.send)
 		prevBuf = buf
+
+		switch buf.Command() {
+		case data_stream.EOF, data_stream.CloseData:
+			p.send(DataRecord{Command: buf.Command()})
+		}
 	}
 }
 

@@ -32,6 +32,8 @@ type DataStream interface {
 }
 
 type dataStream struct {
+	sync.Mutex
+
 	queue    FileChangesQueue
 	filePath string
 	f        *os.File
@@ -84,10 +86,24 @@ func (d *dataStream) Stop() {
 		close(d.reader)
 	})
 
-	if d.f != nil {
-		d.f.Close()
-		d.f = nil
+	d.close()
+}
+
+func (d *dataStream) close() {
+	d.Lock()
+	defer d.Unlock()
+
+	if d.f == nil {
+		return
 	}
+
+	log.Println(time.Now(), "close file: ", d.filePath)
+
+	if err := d.f.Close(); err != nil {
+		log.Println(time.Now(), "failed to close file: ", d.filePath)
+	}
+
+	d.f = nil
 }
 
 func (d *dataStream) reactor() {
@@ -132,13 +148,8 @@ func (d *dataStream) handleEvent(event Event) {
 
 		d.reader <- CloseBuffer(nil)
 
-		log.Println(time.Now(), "close file: ", d.filePath)
+		d.close()
 
-		if err := d.f.Close(); err != nil {
-			log.Println(time.Now(), "failed to close file: ", d.filePath)
-		}
-
-		d.f = nil
 		d.buf.Reset(nil)
 	}
 }

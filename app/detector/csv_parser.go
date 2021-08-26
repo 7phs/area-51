@@ -65,7 +65,7 @@ func parseCSV(delimiter byte, skipHeader, firstLine bool, prevIndex int, prevBuf
 		return firstLine, prev
 	}
 
-	if (buffer.Command() == data_stream.EOF && prev < len(buf)) || prev < len(buf)-2 {
+	if (buffer.Command() == data_stream.EOF || buffer.Command() == data_stream.CloseData && prev < len(buf)) || prev < len(buf)-2 {
 		rec, err := parseDataRecord(delimiter, buf[prev:])
 		switch {
 		case err != nil:

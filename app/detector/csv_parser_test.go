@@ -1,8 +1,9 @@
 package detector
 
 import (
-	data_stream "github.com/7phs/area-51/app/data-stream"
 	"testing"
+
+	data_stream "github.com/7phs/area-51/app/data-stream"
 
 	"github.com/stretchr/testify/assert"
 )

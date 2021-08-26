@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	data_stream "github.com/7phs/area-51/app/data-stream"
 	"github.com/7phs/area-51/app/lib"
 )
 
@@ -13,7 +14,7 @@ var (
 )
 
 type AnomaliesValidator interface {
-	Validate(rec DataRecord) bool
+	Validator() <-chan PartitionStat
 }
 
 type Reference interface {
@@ -24,21 +25,21 @@ type Reference interface {
 }
 
 type reference struct {
-	stream   RecordReader
-	stat     PartitionStat
-	shutdown lib.Shutdown
+	stream    RecordReader
+	validator chan PartitionStat
+	shutdown  lib.Shutdown
 }
 
 func NewReference(stream RecordReader) Reference {
 	return &reference{
-		stream:   stream,
-		stat:     NewPartitionStat(),
-		shutdown: lib.NewShutdown(),
+		stream:    stream,
+		validator: make(chan PartitionStat),
+		shutdown:  lib.NewShutdown(),
 	}
 }
 
-func (r *reference) Validate(_ DataRecord) bool {
-	return true
+func (r *reference) Validator() <-chan PartitionStat {
+	return r.validator
 }
 
 func (r *reference) Start() {
@@ -46,30 +47,42 @@ func (r *reference) Start() {
 	go func() {
 		defer r.shutdown.Done()
 
-		var (
-			totalCount = int64(0)
-			start      = time.Now()
-		)
+		stat := NewPartitionStat()
+		start := time.Now()
+		count := 0
 
 		for rec := range r.stream.Records() {
-			totalCount++
+			if rec.IsCommand() {
+				switch rec.Command {
+				case data_stream.EOF, data_stream.CloseData:
+					log.Println(time.Now(), "REFERENCE: ", count, " / ", time.Since(start))
 
-			r.stat.Add(string(rec.Key), rec.FeaturesF64)
+					select {
+					case r.validator <- stat:
+					case <-r.shutdown.Ch():
+						return
+					}
 
-			if totalCount > 45_000 {
-				log.Println("REFERENCE: 45 000 per ", time.Since(start))
+					stat = NewPartitionStat()
+					start = time.Now()
+					count = 0
+				}
 
-				totalCount = 0
-				start = time.Now()
+				continue
 			}
+
+			count++
+			stat.Add(string(rec.Key), rec.FeaturesF64)
 		}
 	}()
 
 	r.stream.Start()
 }
 
-func (d *reference) Stop() {
-	d.stream.Stop()
+func (r *reference) Stop() {
+	r.stream.Stop()
 
-	d.shutdown.Stop(nil, nil)
+	r.shutdown.Stop(nil, func() {
+		close(r.validator)
+	})
 }

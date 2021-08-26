@@ -15,6 +15,7 @@ const (
 
 type RecordWriter interface {
 	Write(record DataRecord)
+	Flush()
 	Close()
 }
 
@@ -65,6 +66,18 @@ func (w *recordWriter) Write(record DataRecord) {
 	w.init()
 
 	record.Serialize(w.buf)
+}
+
+func (w *recordWriter) Flush() {
+	if w.file == nil {
+		return
+	}
+
+	log.Println(time.Now(), "flush data to file '"+w.fileName+"'")
+
+	if err := w.buf.Flush(); err != nil {
+		log.Println(time.Now(), "failed to flush data to file '"+w.fileName+"': ", err)
+	}
 }
 
 func (w *recordWriter) Close() {

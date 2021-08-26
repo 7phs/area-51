@@ -8,7 +8,7 @@ var (
 )
 
 const (
-	Data Command = iota
+	Data Command = iota + 1
 	NewData
 	EOF
 	CloseData

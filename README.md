@@ -3,7 +3,7 @@
 ## Tasks
 
 * [X] Check existing file per queue and open and read it immediately
-* [X] Parse CSV 
+* [X] Parse CSV
 * [X] Parse features float array
 * [X] Probably send command, or add a feature of handling that file is close on data-stream
 * [X] Skip header
@@ -14,10 +14,10 @@
 * [X] Write record to file
 * [X] Reference collector
 * [X] Calculate Z-test of reference
-* [ ] Waiting for reference before calculating Z-test
-* [ ] Anomalies detector, which uses the reference collector 
+* [X] Waiting for reference before calculating Z-test
+* [X] Anomalies detector, which uses the reference collector
 * [X] Dockerfile and build image
-* [ ] Command for one time processing
+* [ ] Push image to hub.docker.com
 * [ ] Description of the project
 * [ ] Configuration for delimiter, skipping the first line, size of buffer
 * [ ] Pool for read buffer
@@ -26,6 +26,7 @@
 * [ ] Logger with levels
 
 References:
+
 1. [Z-test](https://en.wikipedia.org/wiki/Z-test)
 2. [Rapid calculation methods for standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods)
 3. [Comparing means: z and t tests](https://mgimond.github.io/Stats-in-R/z_t_tests.html)

@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	data_stream "github.com/7phs/area-51/app/data-stream"
 	"github.com/7phs/area-51/app/lib"
 )
 
@@ -51,15 +52,50 @@ func (d *detector) Start() {
 		var (
 			totalCount = int64(0)
 			start      = time.Now()
+			loaded     = false
+			stat       PartitionStat
+			ok         bool
 		)
 
 		for rec := range d.stream.Records() {
+			if rec.IsCommand() {
+				switch rec.Command {
+				case data_stream.EOF, data_stream.CloseData:
+					log.Println(time.Now(), "DETECTOR: ", totalCount, " / ", time.Since(start))
+
+					d.cleanWriter.Flush()
+					d.anomaliesWriter.Flush()
+
+					totalCount = 0
+					start = time.Now()
+				}
+
+				continue
+			}
+
+			// wait for stat
+			if !loaded {
+				stat, ok = <-d.validator.Validator()
+				loaded = true
+				start = time.Now()
+			} else {
+				select {
+				case stat, ok = <-d.validator.Validator():
+				default:
+				}
+			}
+
+			if !ok {
+				log.Println(time.Now(), "stat updated is closed")
+				return
+			}
+
 			totalCount++
 
-			d.writeRecord(rec)
+			d.writeRecord(rec, stat.IsAnomaly(string(rec.Key), rec.FeaturesF64))
 
-			if totalCount > 45_000 {
-				log.Println("DETECTOR: 45 000 per ", time.Since(start))
+			if totalCount >= 50_000 {
+				log.Println(time.Now(), "DETECTOR: ", totalCount, " / ", time.Since(start))
 
 				totalCount = 0
 				start = time.Now()
@@ -70,8 +106,8 @@ func (d *detector) Start() {
 	d.stream.Start()
 }
 
-func (d *detector) writeRecord(rec DataRecord) {
-	if d.validator.Validate(rec) {
+func (d *detector) writeRecord(rec DataRecord, isAnomaly bool) {
+	if !isAnomaly {
 		d.cleanWriter.Write(rec)
 		return
 	}
