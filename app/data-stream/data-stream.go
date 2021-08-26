@@ -21,7 +21,7 @@ var (
 )
 
 type DataReader interface {
-	Read() <-chan []byte
+	Read() <-chan Buffer
 }
 
 type DataStream interface {
@@ -36,8 +36,8 @@ type dataStream struct {
 	filePath string
 	f        *os.File
 	buf      *bufio.Reader
-	reader   chan []byte
-	cmd      chan bool
+	reader   chan Buffer
+	cmd      chan Command
 
 	readWG   sync.WaitGroup
 	shutdown lib.Shutdown
@@ -49,13 +49,13 @@ func NewDataStream(queue FileChangesQueue) DataStream {
 		filePath: queue.FilePath(),
 		f:        nil,
 		buf:      bufio.NewReaderSize(nil, defaultBufSize),
-		reader:   make(chan []byte),
-		cmd:      make(chan bool),
+		reader:   make(chan Buffer),
+		cmd:      make(chan Command),
 		shutdown: lib.NewShutdown(),
 	}
 }
 
-func (d *dataStream) Read() <-chan []byte {
+func (d *dataStream) Read() <-chan Buffer {
 	return d.reader
 }
 
@@ -116,22 +116,21 @@ func (d *dataStream) handleEvent(event Event) {
 		}
 		d.buf.Reset(d.f)
 
-		d.delimiterCmd()
-		d.readCmd()
+		d.sendCmd(NewData)
 
 	case Read:
 		if d.f == nil {
 			return
 		}
 
-		d.readCmd()
+		d.sendCmd(Data)
 
 	case Close:
 		if d.f == nil {
 			return
 		}
 
-		d.delimiterCmd()
+		d.reader <- CloseBuffer(nil)
 
 		log.Println(time.Now(), "close file: ", d.filePath)
 
@@ -144,23 +143,19 @@ func (d *dataStream) handleEvent(event Event) {
 	}
 }
 
-func (d *dataStream) delimiterCmd() {
-	d.reader <- nil
-}
-
-func (d *dataStream) readCmd() {
+func (d *dataStream) sendCmd(command Command) {
 	go func() {
-		d.cmd <- true
+		d.cmd <- command
 	}()
 }
 
 func (d *dataStream) readStream() {
-	for range d.cmd {
-		d.tryReadBuf()
+	for cmd := range d.cmd {
+		d.tryReadBuf(cmd)
 	}
 }
 
-func (d *dataStream) tryReadBuf() {
+func (d *dataStream) tryReadBuf(cmd Command) {
 	for {
 		select {
 		case <-d.shutdown.Ch():
@@ -171,15 +166,24 @@ func (d *dataStream) tryReadBuf() {
 		buf := make([]byte, defaultBufSize)
 
 		n, err := d.buf.Read(buf)
-		if err != nil && !errors.Is(err, io.EOF) {
+		switch {
+		case errors.Is(err, io.EOF):
+			cmd = EOF
+
+		case err != nil:
 			log.Println(time.Now(), "error while read: ", err)
-		}
-		if n == 0 {
 			return
 		}
 
 		buf = buf[:n]
 
-		d.reader <- buf
+		d.reader <- NewBuffer(cmd, buf)
+
+		switch cmd {
+		case NewData:
+			cmd = Data
+		case EOF:
+			return
+		}
 	}
 }

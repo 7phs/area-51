@@ -61,18 +61,17 @@ func (p *recordReader) Stop() {
 
 func (p *recordReader) processor() {
 	var (
-		prevBuf   []byte
+		prevBuf   data_stream.Buffer
 		firstLine = true
 		prevIndex = -1
 	)
 
 	for buf := range p.stream.Read() {
-		if buf == nil {
+		switch buf.Command() {
+		case data_stream.NewData, data_stream.CloseData:
 			firstLine = true
 			prevBuf = nil
 			prevIndex = -1
-			// TODO: handle finish of buffer
-			continue
 		}
 
 		firstLine, prevIndex = parseCSV(p.delimiter, p.skipHeader, firstLine, prevIndex, prevBuf, buf, p.send)

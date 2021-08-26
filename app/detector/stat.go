@@ -3,7 +3,6 @@ package detector
 import "math"
 
 type Accumulator struct {
-	sum     float64
 	numbers int64
 
 	meanS float64
@@ -15,7 +14,6 @@ type Accumulator struct {
 }
 
 func (a *Accumulator) Add(v float64) {
-	a.sum += v
 	a.numbers++
 
 	prevMeanS := a.meanS
@@ -31,8 +29,9 @@ func (a *Accumulator) MeanStdDev() (float64, float64) {
 		return a.mean, a.stdDev
 	}
 
-	a.mean = a.sum / float64(a.numbers)
+	a.mean = a.meanS
 	a.stdDev = math.Sqrt(a.qS / float64(a.numbers-1))
+	a.calculated = true
 
 	return a.mean, a.stdDev
 }
