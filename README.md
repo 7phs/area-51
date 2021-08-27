@@ -74,6 +74,10 @@ The solution breaks implementation into two big components:
 * reading data - responsible for listening of files changes reading, representing data stored in files and stream of bytes;
 * processing data - responsible for parsing a stream of bytes into data records, scoring them, and storing them into destination files.
 
+#### Component diagram
+
+![Component diagram](doc/img/component-diagram.png)
+
 A major reason for it is representing data as an infinite stream for a processor.
 It helps update a data source and possibly replace it with a stream from network services, etc.  
 

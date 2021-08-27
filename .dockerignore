@@ -2,4 +2,5 @@
 .idea
 .DS_Store
 bin/*
+/doc
 /test-data
