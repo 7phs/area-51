@@ -1,8 +1,8 @@
 # Dataset anomalies :flying_saucer: detector
 
 `area-51` is a tool for detecting analytics in a set of data using [Z-test](https://en.wikipedia.org/wiki/Z-test).
-A statistics preferences of reference data uses for scoring raw data.
-Source of data is files in CSV format.
+A statistics preferences of reference data use for scoring raw data.
+The sources of data are files in CSV format.
 
 ## How to use
 
@@ -10,18 +10,18 @@ Source of data is files in CSV format.
 
 Reference data and raw data should store in two different files.
 
-Raw data splits by `Z-score` and put into two files:
+Raw data is split by `Z-score` and put into two files:
 * Clear data is stored to `clean.csv`;
-* Record contains data greater than expected deviation is store to `anomalies.csv`.
+* Record contains data greater than expected deviation is stored to `anomalies.csv`.
 
-The tool launches, processes existing files and listens changes of reference and raw files till a user stops it.
-It processes changes in data (appending, replacing of file, etc.) in real time.
+The tool launches processes existing files and listens to reference and raw files until a user stops it.
+It processes changes in data (appending, replacing a file, etc.) in real-time.
 
-A user ables to launch the tool even source files are not on the place.
+A user can launch the tool even source files are not in place.
 The tool will process it if a user puts files on a place identified by CLI options `--reference` and `--raw`.
 
-Log messages inform a user that exising data is completely processed.
-A user stop the tool at proper time, when files will not change, or by another reason.
+Log messages inform a user that existing data is completely processed.
+A user stops the tool at the proper time, when files will not change, or another reason.
 
 ### Run
 
@@ -56,41 +56,41 @@ There are two sides of the solution that I would like to describe in detail.
 
 ### Statistics
 
-[Z-test](https://en.wikipedia.org/wiki/Z-test) uses for estimating a quality of a data record.
+[Z-test](https://en.wikipedia.org/wiki/Z-test) uses for estimating the quality of a data record.
 
-Needs to know mean and standart deviation a feature of partition assigned to a data record to calculate `Z-score`.
+Needs to know to mean and standard deviation a feature of partition assigned to a data record to calculate `Z-score`.
 
-There are several way to do it:
+There are several ways to do it:
 
 * collect all data are included into partition;
-* calculating mean and stadnard deviation on a stream of data.
+* calculating mean and standard deviation on a stream of data.
 
-The solution is implemented the second one based on description at [Rapid calculation methods for standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods):
+The solution is implemented the second one based on the description at [Rapid calculation methods for the standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods):
 > This is a "one pass" algorithm for calculating variance of n samples without the need to store prior data during the calculation. Applying this method to a time series will result in successive values of standard deviation corresponding to n data points as n grows larger with each new sample, rather than a constant-width sliding window calculation. 
 
 ### Engineering
 
-The solution breaks implementation into two big component:
+The solution breaks implementation into two big components:
 * reading data - responsible for listening of files changes reading, representing data stored in files and stream of bytes;
-* processing data - responsible for parsing stream of bytes into data records, score them and store into destination files. 
+* processing data - responsible for parsing a stream of bytes into data records, scoring them, and storing them into destination files.
 
-A major reason of it is a representing a data as infinite stream for a processor.
-It helps update a source of data and possibly replaced it with stream from network services, etc.  
+A major reason for it is representing data as an infinite stream for a processor.
+It helps update a data source and possibly replace it with a stream from network services, etc.  
 
 Important parts of the solution that were implemented to reduce the processing time of data files:
 
-* Listen OS file events to handle all changes of raw and reference files;
-* Using a buffer to read data from file and serialize it;
-* Custom CSV reader to reducing overhead of common solution;
-* Use slices of data buffer to assign as record fields instead of copy data during record's fetching;
-* Parse only significant part of data record (key and features);
-* Keep raw representation of data record as slice of bytes to easily serialize it.
+* Listen to OS file events to handle all changes of raw and reference files;
+* Using a buffer to read data from a file and serialize it;
+* Custom CSV reader to reducing the overhead of standard solution;
+* Use slices of the data buffer to assign as record fields instead of copy data during record's fetching;
+* Parse an only significant part of the data record (key and features);
+* Keep raw representation of data record as a slice of bytes to easily serialize it.
 
 ### Benchmark
 
 Data processing time measurements were taken to determine the overall performance level of the solution.
 
-Test references contains ~100 000 records and raw data contains ~100 000 records.
+Test reference contains ~100 000 records, and raw data contains ~100 000 records.
 
 Hardware:
 
