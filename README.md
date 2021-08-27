@@ -1,6 +1,6 @@
 # Dataset anomalies :flying_saucer: detector
 
-`area-51` is a tool for detecting analytics in a set of data using [Z-test].
+`area-51` is a tool for detecting analytics in a set of data using [Z-test](https://en.wikipedia.org/wiki/Z-test).
 A statistics preferences of reference data uses for scoring raw data.
 Source of data is files in CSV format.
 
@@ -47,13 +47,57 @@ cd ./area-51
 go run ./cmd/server --reference /test-data/in/ref.csv --raw /test-data/in/raw.csv --output /test-data/output/
 ```
 
-### Makefile
-
 ## Description of the project
+
+There are two sides of the solution that I would like to describe in detail.
 
 ### Statistics
 
+[Z-test](https://en.wikipedia.org/wiki/Z-test) uses for estimating a quality of a data record.
+
+Needs to know mean and standart deviation a feature of partition assigned to a data record to calculate `Z-score`.
+
+There are several way to do it:
+
+* collect all data are included into partition;
+* calculating mean and stadnard deviation on a stream of data.
+
+The solution is implemented the second one based on description at [Rapid calculation methods for standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods):
+> This is a "one pass" algorithm for calculating variance of n samples without the need to store prior data during the calculation. Applying this method to a time series will result in successive values of standard deviation corresponding to n data points as n grows larger with each new sample, rather than a constant-width sliding window calculation. 
+
 ### Engineering
+
+
+
+read a data as an infinite stream of bytes and the process it.
+
+Break a solution into two parts: 
+
+
+Important parts of the solution that were implemented to reduce the processing time of data files:
+
+* Listen OS file events to handle all changes of raw and reference files;
+* Using a buffer to read data from file and serialize it;
+* Custom CSV reader to reducing overhead of common solution;
+* Use slices of data buffer to assign as record fields instead of copy data during record's fetching;
+* Parse only significant part of data record (key and features);
+* Keep raw representation of data record as slice of bytes to easy serialize it.
+
+### Benchmark
+
+Data processing time measurements were taken to determine the overall performance level of the solution.
+
+Test references contains ~100 000 records and raw data contains ~100 000 records.
+
+Hardware:
+
+* MacBook Pro (15-inch, 2018); 2,6 GHz 6-Core Intel Core i7
+
+Result:
+
+```
+
+```
 
 ## TODO
 
@@ -81,6 +125,6 @@ go run ./cmd/server --reference /test-data/in/ref.csv --raw /test-data/in/raw.cs
 
 ## References:
 
-1. [Z-test]: (https://en.wikipedia.org/wiki/Z-test)
+1. [Z-test](https://en.wikipedia.org/wiki/Z-test)
 2. [Rapid calculation methods for standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods)
 3. [Comparing means: z and t tests](https://mgimond.github.io/Stats-in-R/z_t_tests.html)
