@@ -87,10 +87,8 @@ func (p *recordReader) processor() {
 }
 
 func (p *recordReader) send(rec DataRecord) {
-	p.shutdown.Add(1)
-	go func() {
-		defer p.shutdown.Done()
-
-		p.records <- rec
-	}()
+	select {
+	case <-p.shutdown.Ch():
+	case p.records <- rec:
+	}
 }

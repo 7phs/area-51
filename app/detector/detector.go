@@ -61,10 +61,14 @@ func (d *detector) Start() {
 			if rec.IsCommand() {
 				switch rec.Command {
 				case data_stream.EOF, data_stream.CloseData:
-					log.Println(time.Now(), "DETECTOR: ", totalCount, " / ", time.Since(start))
+					log.Println(time.Now(), "existing data file is processed completely")
 
 					d.cleanWriter.Flush()
 					d.anomaliesWriter.Flush()
+
+					if totalCount > 0 {
+						log.Println(time.Now(), "DETECTOR: ", totalCount, " / ", time.Since(start))
+					}
 
 					totalCount = 0
 					start = time.Now()

@@ -139,6 +139,8 @@ func (d *dataStream) handleEvent(event Event) {
 			return
 		}
 
+		log.Println(time.Now(), "file is updated: ", d.filePath)
+
 		d.sendCmd(Data)
 
 	case Close:

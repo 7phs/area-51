@@ -55,6 +55,7 @@ func (r *reference) Start() {
 			if rec.IsCommand() {
 				switch rec.Command {
 				case data_stream.EOF, data_stream.CloseData:
+					log.Println(time.Now(), "reference file is read completely, waiting for updates")
 					log.Println(time.Now(), "REFERENCE: ", count, " / ", time.Since(start))
 
 					select {
