@@ -1,6 +1,6 @@
-# Dataset anomalies :flying_saucer: detector
+# Anomalies :flying_saucer: detector
 
-`area-51` is a tool for detecting analytics in a set of data using [Z-test](https://en.wikipedia.org/wiki/Z-test).
+`area-51` is a tool for detecting anomalies in a set of data using [Z-test](https://en.wikipedia.org/wiki/Z-test).
 A statistics preferences of reference data use for scoring raw data.
 The sources of data are files in CSV format.
 
