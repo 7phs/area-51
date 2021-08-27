@@ -17,6 +17,9 @@ Raw data splits by `Z-score` and put into two files:
 The tool launches, processes existing files and listens changes of reference and raw files till a user stops it.
 It processes changes in data (appending, replacing of file, etc.) in real time.
 
+A user ables to launch the tool even source files are not on the place.
+The tool will process it if a user puts files on a place identified by CLI options `--reference` and `--raw`.
+
 Log messages inform a user that exising data is completely processed.
 A user stop the tool at proper time, when files will not change, or by another reason.
 
@@ -67,12 +70,12 @@ The solution is implemented the second one based on description at [Rapid calcul
 
 ### Engineering
 
+The solution breaks implementation into two big component:
+* reading data - responsible for listening of files changes reading, representing data stored in files and stream of bytes;
+* processing data - responsible for parsing stream of bytes into data records, score them and store into destination files. 
 
-
-read a data as an infinite stream of bytes and the process it.
-
-Break a solution into two parts: 
-
+A major reason of it is a representing a data as infinite stream for a processor.
+It helps update a source of data and possibly replaced it with stream from network services, etc.  
 
 Important parts of the solution that were implemented to reduce the processing time of data files:
 
@@ -81,7 +84,7 @@ Important parts of the solution that were implemented to reduce the processing t
 * Custom CSV reader to reducing overhead of common solution;
 * Use slices of data buffer to assign as record fields instead of copy data during record's fetching;
 * Parse only significant part of data record (key and features);
-* Keep raw representation of data record as slice of bytes to easy serialize it.
+* Keep raw representation of data record as slice of bytes to easily serialize it.
 
 ### Benchmark
 
@@ -96,7 +99,11 @@ Hardware:
 Result:
 
 ```
+Load and process reference files (before process the first line of raw data):
+      100 000 records / from 150 ms to 250 ms
 
+Scoring raw data:
+       50 000 records / from 65 ms to 100 ms  
 ```
 
 ## TODO
@@ -117,8 +124,9 @@ Result:
 * [X] Anomalies detector, which uses the reference collector
 * [X] Dockerfile and build image
 * [X] Push image to hub.docker.com
-* [ ] Description of the project
+* [X] Description of the project
 * [ ] Configuration for delimiter, skipping the first line, size of buffer
+* [ ] Output stream is a dedicated entity with own interface
 * [ ] Pool for read buffer
 * [ ] Unit-test of happy cases of watcher, data-stream, detector, reference, etc.
 * [ ] Logger with levels
